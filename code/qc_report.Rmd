@@ -1,0 +1,162 @@
+---
+title: "QC Report"
+date: "Updated: `r format(Sys.time())`"
+output:
+      pdf_document:
+        highlight: tango
+        # number_sections: yes
+        # toc: yes
+        # toc_depth: 2
+        # toc_float: yes
+params:
+  experiment: NA
+  amp.match.summary: NA
+  results: NA
+  read_quality: NA
+  seq_cont_per_cycle: NA
+  read_freq_plot: NA
+  # results.summary: NA
+  seq.metrics: NA
+  base_calls_plot: NA
+  ind_na: NA
+---
+
+# `r paste("Experiment:", params$experiment)`
+
+
+```{r include=FALSE}
+library(ggplot2)
+library(knitr)
+# library(ggpubr)
+
+```
+
+## Alignment summary
+```{r echo=FALSE}
+data.frame(num_reads = params$amp.match.summary) %>% 
+  kable()
+```
+
+<!-- ## Results Summary -->
+<!-- ```{r echo=FALSE} -->
+<!-- params$results.summary %>%  -->
+<!--   kable() -->
+<!-- ``` -->
+
+## Sequencer metrics
+```{r echo=FALSE}
+params$seq.metrics %>%
+  kable()
+```
+
+## Sequence quality per base/cycle
+
+```{r echo=FALSE}
+eval(params$read_quality)
+```
+
+
+## Sequence content per base/cycle
+
+```{r echo=FALSE}
+eval(params$seq_cont_per_cycle)
+```
+
+## Base calls per cycle
+
+```{r echo=FALSE}
+eval(params$base_calls_plot)
+```
+
+## Read frequency plot
+
+```{r echo=FALSE}
+eval(params$read_freq_plot)
+```
+
+## Format Results
+
+```{r echo=FALSE}
+df <- do.call('rbind', params$results)
+
+##################
+# Modify columns #
+##################
+df$Col=as.factor(gsub('^.', '', df$Sample_Well))
+df$Row=factor(gsub('..$', '', df$Sample_Well), levels=rev(toupper(letters[1:8])))
+df$Sample=paste0(df$Plate_ID, '-' ,df$Sample_Well)
+df$Plate_ID=as.factor(df$Plate_ID)
+df$Plate_ID=factor(df$Plate_ID, levels(df$Plate_ID)[order(as.numeric(gsub('Plate', '', levels(df$Plate_ID))))])  
+# df$Plate_384=as.factor(df$Plate_384)
+# df$amplicon=factor(df$amplicon, level=c('S2', 'S2_spike', 'RPP30', 'RPP30_spike'))
+
+################################################
+# Filter samples that had < 2000 S2 + S2 spike #
+################################################
+
+remove <- c(
+  df %>%
+    group_by_at(names(df)[!names(df) %in% c("Count", "amplicon")]) %>% 
+    summarise(S2_spike = sum(Count[grepl("spike",amplicon)]),
+            S2 = sum(Count[amplicon == "S2"]),
+            RPP30 = sum(Count[amplicon == "RPP30"])) %>% 
+  # pivot_wider(names_from = amplicon, values_from = Count) %>% 
+  dplyr::select(mergedIndex, RPP30, S2, S2_spike) %>% 
+  filter(RPP30 < 10) %>% 
+  pull(mergedIndex),
+  df %>%
+    group_by_at(names(df)[!names(df) %in% c("Count", "amplicon")]) %>% 
+    summarise(S2_spike = sum(Count[grepl("spike",amplicon)]),
+            S2 = sum(Count[amplicon == "S2"]),
+            RPP30 = sum(Count[amplicon == "RPP30"])) %>% 
+  dplyr::select(mergedIndex, RPP30, S2, S2_spike) %>% 
+  filter(S2 + S2_spike < 500) %>% 
+  pull(mergedIndex)
+  ) %>% 
+  unique()
+```
+
+## Caryover Contamination
+
+```{r echo=FALSE}
+df %>% 
+  group_by(Plate_384_Number,
+           Plate_384_Quadrant) %>% 
+  summarise(Count = sum(Count)) %>% 
+  ggplot(aes(y = Plate_384_Quadrant,
+             x = Plate_384_Number,
+             fill = log10(Count))) +
+  # geom_bar(stat = "identity") +
+  geom_raster() +
+  # facet_grid(Plate_384_Quadrant ~ Plate_384_Number) +
+  # scale_y_log10() +
+  theme_bw() +
+  scale_fill_viridis_c(option = 'plasma')
+
+```
+
+## Plate Map Plot
+
+```{r echo=FALSE, fig.height=10, fig.width=12}
+df %>%
+  filter(!is.na(Plate_ID)) %>% 
+  ggplot(aes(x=Col, y=Row, fill=log10(Count))) + 
+  geom_raster() +
+  coord_equal() +
+  facet_grid(amplicon~Plate_ID) +
+  scale_fill_viridis_c(option = 'plasma')
+
+```
+
+## Plate Map of Missing Values
+
+```{r echo=FALSE, fig.height=10, fig.width=12}
+df %>%
+  filter(!is.na(Plate_ID)) %>% 
+  ggplot(aes(x=Col, y=Row, fill=mergedIndex %in% remove)) + 
+  geom_raster() +
+  coord_equal() +
+  facet_grid(amplicon~Plate_ID) +
+  scale_fill_manual(name = "S2 + S2 Spike < 500",
+                    values = c("#FFFFFF", "#000000"))
+```
