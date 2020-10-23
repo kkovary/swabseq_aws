@@ -232,7 +232,7 @@ S2_spike.swap <- tibble(ind1 = factor(), ind2 = factor(), n = numeric())
 RPP30.swap <- tibble(ind1 = factor(), ind2 = factor(), n = numeric())
 #------------------------------------------------------------------------------------------
 
-fastq_dir  <- paste0(rundir, 'out/')
+fastq_dir  <- paste0(rundir, 'bcls/out/')
 in.fileI1  <- paste0(fastq_dir, 'Undetermined_S0_I1_001.fastq.gz')
 in.fileI2  <- paste0(fastq_dir, 'Undetermined_S0_I2_001.fastq.gz')
 in.fileR1  <- paste0(fastq_dir, 'Undetermined_S0_R1_001.fastq.gz')
