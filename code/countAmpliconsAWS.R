@@ -356,9 +356,9 @@ df %>%
          classification = NA,
          classification = ifelse(mergedIndex %in% remove,
                                  "inconclusive",
-                                 ifelse(s2_vs_spike > 0.003 & classification != "inconclusive",
+                                 ifelse(s2_vs_spike > 0.003 & !mergedIndex %in% remove,
                                         "COVID_pos",
-                                        ifelse(s2_vs_spike < 0.003 & classification != "inconclusive",
+                                        ifelse(s2_vs_spike < 0.003 & !mergedIndex %in% remove,
                                                "COVID_neg",
                                                classification)))) %>%
   write_csv(paste0(rundir, 'countTable.csv'))
