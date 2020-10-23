@@ -321,7 +321,7 @@ if(runSwap){
 
 
 # Illumina stats
-sav=savR(paste0(rundir))
+sav=savR(paste0(rundir,"/bcls"))
 tMet=tileMetrics(sav)
 phiX=mean(tMet$value[tMet$code=='300'])
 clusterPF=mean(tMet$value[tMet$code=='103']/tMet$value[tMet$code=='102'], na.rm=T)
@@ -362,12 +362,6 @@ rmarkdown::render(
   envir = new.env(parent = globalenv())
 )
 
-######################################
-# Add analysis template to directory #
-######################################
-if (!file.exists("Analysis.Rmd")) {
-  system("cp ../../code/Analysis.Rmd .")
-}
 
 ##################
 # Push to GitHub #
