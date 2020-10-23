@@ -102,8 +102,8 @@ errorCorrectIdxAndCountAmplicons=function(rid, count.table, ind1,ind2,e=1){
   index2=unique(count.table$index2)
   # for subset of reads where matching amplicon of interest (rid)
   # match observed index sequences to expected sequences allowing for e hamming distance
-  i1m=amatch(ind1[rid],index1, method='hamming', maxDist=e, matchNA=F, nthread = 6)
-  i2m=amatch(ind2[rid],index2, method='hamming', maxDist=e, matchNA=F, nthread = 6)
+  i1m=amatch(ind1[rid],index1, method='hamming', maxDist=e, matchNA=F, nthread = threads)
+  i2m=amatch(ind2[rid],index2, method='hamming', maxDist=e, matchNA=F, nthread = threads)
   # combine the error corrected indices together per read
   idm=paste0(index1[i1m], index2[i2m])
   #match error corrected indices to lookup table and count
