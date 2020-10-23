@@ -87,6 +87,8 @@ if(!file.exists(fastqR1)) {
   #-----------------------------------------------------------------------------------------------------
 }
 
+setwd(file.path(rundir))
+
 # read in n reads at a time (reduce if RAM limited)
 # nbuffer=3e7
 # nbuffer=as.numeric(args$lbuffer)
