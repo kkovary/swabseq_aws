@@ -386,7 +386,7 @@ if(args$git){
   
   
   # Add pdf to git
-  pdf_name <- paste0(exp_name,".pdf")
+  pdf_name <- paste0(exp_name,".html")
   system(paste0("git add ", 
                 # rundir, 
                 pdf_name))
