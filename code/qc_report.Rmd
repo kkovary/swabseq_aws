@@ -2,7 +2,7 @@
 title: "QC Report"
 date: "Updated: `r format(Sys.time())`"
 output:
-      pdf_document:
+      html_document:
         highlight: tango
         # number_sections: yes
         # toc: yes
