@@ -55,7 +55,7 @@ nbuffer = as.numeric(args$lbuffer)
 
 # setwd(rundir)
 if (file.exists(rundir)){
-  setwd(file.path(mainDir, rundir))
+  setwd(file.path(rundir))
 } else {
   dir.create(file.path(rundir))
   setwd(file.path(rundir))
