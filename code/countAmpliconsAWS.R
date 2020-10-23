@@ -359,7 +359,8 @@ df %>%
                                  ifelse(s2_vs_spike > 0.003 & classification != "inconclusive",
                                         "COVID_pos",
                                         ifelse(s2_vs_spike < 0.003 & classification != "inconclusive",
-                                               "COVID_neg")))) %>%
+                                               "COVID_neg",
+                                               classification)))) %>%
   write_csv(paste0(rundir, 'countTable.csv'))
 
 ##################
