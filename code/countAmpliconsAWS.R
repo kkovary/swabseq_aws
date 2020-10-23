@@ -21,7 +21,7 @@ library(argparser)
 p = arg_parser("utility to count amplicons for SwabSeq")
 p=add_argument(p,"--rundir",  default=".", help="path containing SampleSheet")
 # p=add_argument(p,"--outdir", default = ".", help = "path to data output")
-p=add_argument(p,"--basespaceID",  default=1000, help="BaseSpace Run ID")
+p=add_argument(p,"--basespaceID",  default=NULL, help="BaseSpace Run ID")
 #p=add_argument(p,"--countsOnly",  default=TRUE, help="only output table of counts")
 p=add_argument(p,"--extendedAmplicons", default=F, help="additional swabseq amplicons")
 p=add_argument(p,"--bcSwap", default=F, help="Analysis of index mis-assignment")
@@ -55,38 +55,17 @@ threads = args$threads
 nbuffer = as.numeric(args$lbuffer)
 #requires BCLs (or basespaceID), python3.7 in path, bcl2fastq in path and SampleSheet.csv (or xls)
 
-# Generate sample sheet from XLS file ----------------------------------------------------------------
-# using octant python script [skip this section if you already have SampleSheet.csv in rundir/
-# see https://github.com/octantbio/SwabSeq
-sampleXLS <- list.files(rundir)[grepl("SwabSeq.*xlsx",list.files(rundir))][1]
-sampleXLS=paste0(rundir,sampleXLS)
-sampleCSV=paste0(rundir,'SampleSheet.csv')
-setwd(rundir)
 
 
-# if i5 / i7 tabs don't exist in SwabSeq.xlsx, make them
-if(sum(c("i7","i5") %in% readxl::excel_sheets(sampleXLS)) != 2){
-  system(paste("Rscript ../../code/munge1536.R --rundir ."))
-} else{
-  # wb <- openxlsx::loadWorkbook(sampleXLS)
-  # openxlsx::removeWorksheet(wb, sheet = "i7")
-  # openxlsx::removeWorksheet(wb, sheet = "i5")
-  # openxlsx::saveWorkbook(wb, sampleXLS, overwrite = TRUE)
-  wb <- loadWorkbook(sampleXLS)
-  removeSheet(wb, sheetName = "i7")
-  removeSheet(wb, sheetName = "i5")
-  saveWorkbook(wb, sampleXLS)
+# setwd(rundir)
+if (file.exists(rundir)){
+  setwd(file.path(mainDir, rundir))
+} else {
+  dir.create(file.path(rundir))
+  setwd(file.path(rundir))
   
-  system(paste("Rscript ../../code/munge1536.R --rundir ."))
 }
 
-# if csv sample sheet doesn't exist, make it 
-if(!file.exists(sampleCSV)) {
-  system(paste("python3 ../../code/platemap2samp.py", sampleXLS,  '--o', sampleCSV))
-} else{
-  system("rm -f SampleSheet.csv")
-  system(paste("python3 ../../code/platemap2samp.py", sampleXLS,  '--o', sampleCSV))
-}
 #-----------------------------------------------------------------------------------------------------
 
 # if fastqs don't exist grab them from basespace
@@ -95,9 +74,16 @@ if(!file.exists(fastqR1)) {
   #Pull BCLs from basespace [skip this section if you already placed bcls in rundir/bcls/] ------------
   #if running miseq then paste run id here
   #if miseq run then grab from basespace, otherwise place bcls here and skip lines 12-23
-  # system(paste("bs download run --id", basespaceID, "-o bcls/"))
+  
+  if(is.null(basespaceID)){
+    basespaceID <- tail(strsplit(rundir,"/")[[1]],1)
+    system(paste("bs download run --name", basespaceID, "-o bcls/"))
+  } else{
+    system(paste("bs download run --id", basespaceID, "-o bcls/"))
+  }
+  
   # run bcl2fastq to generate fastq.gz files (no demux is happening here)
-  # setwd(paste0(rundir,'bcls/'))
+  setwd(paste0(rundir,'bcls/'))
   #note this is using 64 threads and running on a workstation, reduce threads if necessary
   system(paste("bcl2fastq --runfolder-dir . --output-dir out/ --create-fastq-for-index-reads  --ignore-missing-bcl --use-bases-mask=Y26,I10,I10 --processing-threads", threads, "--no-lane-splitting --sample-sheet /dev/null"))
   #for sharing, make tar of bcls directory
@@ -188,7 +174,7 @@ bcSwap=function(rid, count.table, ind_df, ind1,ind2,e=1){
 # }
 
 # Munginging sample sheet-------------------------------------------------------------------
-ss=read.delim(paste0(rundir,'SampleSheet.csv'), stringsAsFactors=F, skip=14, sep=',')
+ss=read.delim(paste0('../../misc/SampleSheet.csv'), stringsAsFactors=F, skip=14, sep=',')
 ss$mergedIndex=paste0(ss$index, ss$index2)
 
 if(args$allUDI){
