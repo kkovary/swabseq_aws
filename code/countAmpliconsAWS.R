@@ -65,7 +65,7 @@ if (file.exists(rundir)){
 #-----------------------------------------------------------------------------------------------------
 
 # if fastqs don't exist grab them from basespace
-fastqR1  <- paste0(rundir, 'out/Undetermined_S0_R1_001.fastq.gz')
+fastqR1  <- paste0(rundir, 'bcls/out/Undetermined_S0_R1_001.fastq.gz')
 if(!file.exists(fastqR1)) {
   #Pull BCLs from basespace [skip this section if you already placed bcls in rundir/bcls/] ------------
   #if running miseq then paste run id here
