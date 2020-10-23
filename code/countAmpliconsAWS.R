@@ -354,13 +354,13 @@ params <- list(
   base_calls_plot = base_calls_plot
 )
 
-rmarkdown::render(
-  input = "../../code/qc_report.Rmd",
-  output_file = paste0(params$experiment,".pdf"),
-  output_dir = rundir,
-  params = params,
-  envir = new.env(parent = globalenv())
-)
+# rmarkdown::render(
+#   input = "../../code/qc_report.Rmd",
+#   output_file = paste0(params$experiment,".pdf"),
+#   output_dir = rundir,
+#   params = params,
+#   envir = new.env(parent = globalenv())
+# )
 
 
 ##################
