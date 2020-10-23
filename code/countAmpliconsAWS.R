@@ -21,7 +21,7 @@ library(argparser)
 p = arg_parser("utility to count amplicons for SwabSeq")
 p=add_argument(p,"--rundir",  default=".", help="path containing SampleSheet")
 # p=add_argument(p,"--outdir", default = ".", help = "path to data output")
-p=add_argument(p,"--basespaceID",  default=NULL, help="BaseSpace Run ID")
+p=add_argument(p,"--basespaceID",  default=NA, help="BaseSpace Run ID")
 #p=add_argument(p,"--countsOnly",  default=TRUE, help="only output table of counts")
 p=add_argument(p,"--extendedAmplicons", default=F, help="additional swabseq amplicons")
 p=add_argument(p,"--bcSwap", default=F, help="Analysis of index mis-assignment")
@@ -71,7 +71,7 @@ if(!file.exists(fastqR1)) {
   #if running miseq then paste run id here
   #if miseq run then grab from basespace, otherwise place bcls here and skip lines 12-23
   
-  if(is.null(basespaceID)){
+  if(is.na(basespaceID)){
     basespaceID <- tail(strsplit(rundir,"/")[[1]],1)
     system(paste("bs download run --name", basespaceID, "-o bcls/"))
   } else{
