@@ -305,7 +305,7 @@ results <- count.tables
 
 if(extendedAmplicons){ results=list(S2.table=S2.table, S2_spike.table=S2_spike.table, RPP30.table=RPP30.table,RPP30_spike.table=RPP30_spike.table) }
 
-do.call('rbind', results) %>% write_csv(paste0(rundir, 'countTable.csv')) 
+# do.call('rbind', results) %>% write_csv(paste0(rundir, 'countTable.csv')) 
 saveRDS(results, file=paste0(rundir, 'countTable.RDS'),version=2)
 
 if(runSwap){
@@ -314,6 +314,53 @@ if(runSwap){
                RPP30.swap = RPP30.swap)
   saveRDS(swap, file = paste0(rundir, 'swap.RDS'),version=2)
 }
+
+###################
+# Reformat output #
+###################
+
+df <- do.call('rbind', results)
+
+remove <- c(
+  df %>%
+    group_by_at(names(df)[!names(df) %in% c("Count", "amplicon")]) %>% 
+    summarise(S2_spike = sum(Count[grepl("spike",amplicon)]),
+              S2 = sum(Count[amplicon == "S2"]),
+              RPP30 = sum(Count[amplicon == "RPP30"])) %>% 
+    # pivot_wider(names_from = amplicon, values_from = Count) %>%
+    ungroup() %>% 
+    dplyr::select(mergedIndex, RPP30, S2, S2_spike) %>% 
+    filter(RPP30 < 10) %>% 
+    pull(mergedIndex),
+  df %>%
+    group_by_at(names(df)[!names(df) %in% c("Count", "amplicon")]) %>% 
+    summarise(S2_spike = sum(Count[grepl("spike",amplicon)]),
+              S2 = sum(Count[amplicon == "S2"]),
+              RPP30 = sum(Count[amplicon == "RPP30"])) %>% 
+    ungroup() %>% 
+    dplyr::select(mergedIndex, RPP30, S2, S2_spike) %>% 
+    filter(S2 + S2_spike < 500) %>% 
+    pull(mergedIndex) %>% 
+    unique()
+)
+
+df %>%
+  # filter(!mergedIndex %in% remove) %>% # Remove low copy samples
+  group_by_at(names(df)[!names(df) %in% c("Count", "amplicon")]) %>% 
+  summarise(S2_spike = sum(Count[grepl("spike",amplicon)]),
+            S2 = sum(Count[amplicon == "S2"]),
+            RPP30 = sum(Count[amplicon == "RPP30"])) %>% 
+  ungroup() %>% 
+  # pivot_wider(names_from = amplicon, values_from = Count) %>% 
+  mutate(s2_vs_spike = ((S2 + 1) / (S2_spike + 1)),
+         classification = NA,
+         classification = ifelse(mergedIndex %in% remove,
+                                 "inconclusive",
+                                 ifelse(s2_vs_spike > 0.003 & classification != "inconclusive",
+                                        "COVID_pos",
+                                        ifelse(s2_vs_spike < 0.003 & classification != "inconclusive",
+                                               "COVID_neg")))) %>%
+  write_csv(paste0(rundir, 'countTable.csv'))
 
 ##################
 # Save QC Report #
