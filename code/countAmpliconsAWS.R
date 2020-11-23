@@ -37,7 +37,7 @@ if (file.exists(rundir)){
 #-----------------------------------------------------------------------------------------------------
 
 # if fastqs don't exist grab them from basespace
-fastqR1  <- paste0(rundir, 'bcls/out/Undetermined_S0_R1_001.fastq.gz')
+fastqR1  <- paste0(rundir, 'out/Undetermined_S0_R1_001.fastq.gz')
 if(!file.exists(fastqR1)) {
   #Pull BCLs from basespace [skip this section if you already placed bcls in rundir/bcls/] ------------
   #if running miseq then paste run id here
@@ -45,13 +45,13 @@ if(!file.exists(fastqR1)) {
   
   if(is.na(basespaceID)){
     basespaceID <- tail(strsplit(rundir,"/")[[1]],1)
-    system(paste("bs download run --name", basespaceID, "-o bcls/"))
+    system(paste("bs download run --name", basespaceID, "-o ."))
   } else{
-    system(paste("bs download run --id", basespaceID, "-o bcls/"))
+    system(paste("bs download run --id", basespaceID, "-o ."))
   }
   
   # run bcl2fastq to generate fastq.gz files (no demux is happening here)
-  setwd(paste0(rundir,'bcls/'))
+  #setwd(paste0(rundir,'bcls/'))
   #note this is using 64 threads and running on a workstation, reduce threads if necessary
   system(paste("bcl2fastq --runfolder-dir . --output-dir out/ --create-fastq-for-index-reads  --ignore-missing-bcl --use-bases-mask=Y26,I10,I10 --processing-threads", threads, "--no-lane-splitting --sample-sheet /dev/null"))
   #for sharing, make tar of bcls directory
