@@ -1,5 +1,10 @@
 # swabseq_aws
 
+## Run
+docker build -t kylekovary:swabseq_aws .
+docker run -d --rm --privileged -e PASSWORD=octant
+
+
 ## To do
 - [ ] Get docker image on Amazon Elastic Container Service
 - [ ] Get bs to install from Docker
