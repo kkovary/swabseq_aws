@@ -14,8 +14,9 @@ args=parse_args(p)
 suppressMessages(library(tidyverse))
 suppressMessages(library(Rqc))
 suppressMessages(library(savR))
-suppressMessages(library(Biostrings))
-suppressMessages(library(xlsx))
+suppressMessages(library(seqinr))
+
+revcomp <- function(x) {toupper(c2s(rev(comp(s2c(x)))))}
 
 rundir=args$rundir
 basespaceID=args$basespaceID
@@ -89,10 +90,10 @@ ind2 <- read_tsv("../../hash_tables/ind2.txt", col_names = FALSE) %>% pull(X1)
 pm384 <- read_csv("../../misc/384_plate_map.csv")
 
 if (sum(unique(results$index) %in% pm384$index) <= 10) { # 10 of the indices are RC of each other
-  pm384$index <- as.character(reverseComplement(DNAStringSet(pm384$index)))
+  pm384$index <- revcomp(pm384$index)
 }
 if (sum(unique(results$index2) %in% pm384$index2) <= 12) { # 10 of the indices are RC of each other
-  pm384$index2 <- as.character(reverseComplement(DNAStringSet(pm384$index2)))
+  pm384$index2 <- revcomp(pm384$index2)
 }
 
 results <- results %>%
@@ -109,8 +110,8 @@ ss <- ss %>%
 
 
 # Check RC for indexes
-ind1_rc <- DNAStringSet(ind1) %>% reverseComplement() %>% as.character()
-ind2_rc <- DNAStringSet(ind2) %>% reverseComplement() %>% as.character()
+ind1_rc <- revcomp(ind1)
+ind2_rc <- revcomp(ind2)
 if(sum(results$index %in% ind1) < sum(results$index %in% ind1_rc)){
   ind1 <- ind1_rc
 }
