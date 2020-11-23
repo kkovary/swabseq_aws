@@ -16,7 +16,13 @@ suppressMessages(library(Rqc))
 suppressMessages(library(savR))
 suppressMessages(library(seqinr))
 
-revcomp <- function(x) {toupper(c2s(rev(comp(s2c(x)))))}
+revcomp <- function(x){
+  if(!is.na(x)){
+    return(toupper(c2s(rev(comp(s2c(x))))))
+  } else{
+    return(NA)
+  }
+}
 
 rundir=args$rundir
 basespaceID=args$basespaceID
