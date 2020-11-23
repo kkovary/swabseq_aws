@@ -125,14 +125,6 @@ results <- results %>%
 write_csv(results, paste0(rundir, 'countTable.csv')) 
 saveRDS(results, file=paste0(rundir, 'countTable.RDS'),version=2)
 
-##################
-# Save QC Report #
-##################
-
-
-##################
-# Save QC Report #
-##################
 
 classification <- results %>%
   filter(!is.na(Plate_ID)) %>% 
@@ -160,6 +152,10 @@ classification <- results %>%
                                                              classification)))))) %>% 
   dplyr::select(index, index2, pm_384, row_384, col_384, Plate_ID, Sample_Well, S2_spike, S2, RPP30, s2_vs_spike, classification)
 
+write_csv(classification, paste0(rundir, 'COVID_results.csv'))
+##################
+# Save QC Report #
+##################
 
 amp.match.summary.df <- results %>% 
   group_by(amplicon) %>% 
