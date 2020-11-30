@@ -1,5 +1,6 @@
 # swabseq_aws
 
+## Issues
 * Docker is currently not working, issue with automated authentication of BaseSpace CLI in order to download data.
 * Because of the issue described above, it also has not been updated to work with current code.
 
