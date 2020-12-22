@@ -88,12 +88,6 @@ ind1 <- read_tsv("../../hash_tables/ind1.txt", col_names = FALSE) %>% pull(X1)
 ind2 <- read_tsv("../../hash_tables/ind2.txt", col_names = FALSE) %>% pull(X1)
 pm384 <- read_csv("../../misc/384_plate_map.csv")
 
-if (sum(unique(results$index) %in% pm384$index) <= 10) { # 10 of the indices are RC of each other
-  pm384$index <- as.character(reverseComplement(DNAStringSet(pm384$index)))
-}
-if (sum(unique(results$index2) %in% pm384$index2) <= 12) { # 10 of the indices are RC of each other
-  pm384$index2 <- as.character(reverseComplement(DNAStringSet(pm384$index2)))
-}
 
 results <- results %>%
   left_join(pm384) %>%
@@ -108,15 +102,6 @@ ss <- ss %>%
          col_384 = as.numeric(col_384))
 
 
-# Check RC for indexes
-ind1_rc <- DNAStringSet(ind1) %>% reverseComplement() %>% as.character()
-ind2_rc <- DNAStringSet(ind2) %>% reverseComplement() %>% as.character()
-if(sum(results$index %in% ind1) < sum(results$index %in% ind1_rc)){
-  ind1 <- ind1_rc
-}
-if(sum(results$index2 %in% ind2) < sum(results$index2 %in% ind2_rc)){
-  ind2 <- ind2_rc
-}
 
 results <- results %>% 
   mutate(index = factor(index, levels = ind1),
@@ -125,6 +110,9 @@ results <- results %>%
 write_csv(results, paste0(rundir, 'countTable.csv')) 
 saveRDS(results, file=paste0(rundir, 'countTable.RDS'),version=2)
 
+##################
+# Save QC Report #
+##################
 
 classification <- results %>%
   filter(!is.na(Plate_ID)) %>% 
@@ -145,17 +133,13 @@ classification <- results %>%
                                         "failed: low S2",
                                         ifelse(S2 + S2_spike >= 500 & RPP30 < 10,
                                                "failed: low RPP30",
-                                               ifelse(s2_vs_spike > 0.003 & RPP30 >= 10,
+                                               ifelse(s2_vs_spike > 0.1 & RPP30 >= 10,
                                                       "COVID_pos",
-                                                      ifelse(s2_vs_spike < 0.003 & RPP30 >= 10,
+                                                      ifelse(s2_vs_spike < 0.1 & RPP30 >= 10,
                                                              "COVID_neg",
-                                                             classification)))))) %>% 
-  dplyr::select(index, index2, pm_384, row_384, col_384, Plate_ID, Sample_Well, S2_spike, S2, RPP30, s2_vs_spike, classification)
+                                                             classification))))))
 
-write_csv(classification, paste0(rundir, 'COVID_results.csv'))
-##################
-# Save QC Report #
-##################
+write_csv(classification, "LIMS_results.csv")
 
 amp.match.summary.df <- results %>% 
   group_by(amplicon) %>% 
@@ -167,6 +151,46 @@ amp.match.summary.df <- results %>%
 amp.match.summary <- amp.match.summary.df$sum
 names(amp.match.summary) <- amp.match.summary.df$amplicon
 
+
+
+sum_matched <- results %>% 
+  filter(!is.na(Plate_ID)) %>% 
+  group_by(amplicon) %>% 
+  summarise(num_matched = sum(Count)) %>% 
+  mutate(amplicon = ifelse(is.na(amplicon),
+                           "no_align",
+                           amplicon)) %>% 
+  left_join(amp.match.summary.df) %>% 
+  dplyr::rename(num_reads = sum) %>% 
+  dplyr::select(amplicon, num_reads, everything()) %>% 
+  mutate(perc_match = paste0(round((num_matched / num_reads), 2) * 100, "%"),
+         num_reads = format(num_reads, big.mark = ','),
+         num_matched = format(num_matched, big.mark = ','))
+
+sum_matched_df <- sum_matched %>% 
+  dplyr::select(-amplicon) %>% 
+  as.data.frame()
+rownames(sum_matched_df) <- sum_matched$amplicon
+
+# Run Info
+rp <- read_xml("RunParameters.xml")
+
+reagent <- xml_find_all(rp, '//ReagentKitRfidTag')
+flow_cell <- xml_find_all(rp, '//FlowCellRfidTag')
+
+run_info <- tibble(runID = xml_find_all(rp, '//RunID') %>% xml_text(),
+       instrumentID = xml_find_all(rp, '//InstrumentID') %>% xml_text(),
+       chemistry = xml_find_all(rp, '//Chemistry') %>% xml_text(),
+       reagent_SerialNumber = xml_find_all(reagent, './/SerialNumber') %>% xml_text(),
+       reagent_PartNumber = xml_find_all(reagent, './/PartNumber') %>% xml_text(),
+       reagent_LotNumber = xml_find_all(reagent, './/LotNumber') %>% xml_text(),
+       flowCell_SerialNumber = xml_find_all(flow_cell, './/SerialNumber') %>% xml_text(),
+       flowCell_PartNumber = xml_find_all(flow_cell, './/PartNumber') %>% xml_text(),
+       flowCell_LotNumber = xml_find_all(flow_cell, './/LotNumber') %>% xml_text()) %>% 
+  pivot_longer(cols = 1:ncol(.))
+
+write_csv(run_info, 'run_info.csv')
+
 # Illumina stats
 sav=savR(rundir)
 tMet=tileMetrics(sav)
@@ -177,7 +201,7 @@ clusterDensity_perLane=sapply(split(tMet, tMet$lane), function(x) mean(x$value[x
 seq.metrics=data.frame("totReads"=format(sum(amp.match.summary),  big.mark=','),
                        "totReadsPassedQC"=format(sum(amp.match.summary[!(names(amp.match.summary) %in% 'no_align')]), big.mark=','),
                        "phiX"=paste(round(phiX,2), "%"), "clusterPF"=paste(round(clusterPF*100,1), "%"),
-                       "tot_phiX" = format(round(phiX * sum(amp.match.summary)), big.mark = ','),
+                       "tot_phiX" = format(round((phiX / 100) * sum(amp.match.summary)), big.mark = ','),
                        "clustDensity"=paste(round(clusterDensity,1), 'K/mm^2'), 
                        "clustDensity_perLane"=paste(sapply(clusterDensity_perLane, round,1),collapse=' '))
 
@@ -189,17 +213,21 @@ read_quality <- rqcCycleQualityBoxPlot(qcRes) + ylim(0,NA)
 seq_cont_per_cycle <- rqcCycleBaseCallsLinePlot(qcRes)
 read_freq_plot <- rqcReadFrequencyPlot(qcRes)
 base_calls_plot <- rqcCycleBaseCallsLinePlot(qcRes)
+cycl_qual_plot <- rqcCycleQualityPlot(qcRes)
 
 
 params <- list(
   experiment = strsplit(rundir,"/") %>% unlist() %>% tail(1),
+  run_info = run_info,
   amp.match.summary = amp.match.summary,
+  sum_matched_df = sum_matched_df,
   results = results,
   seq.metrics = seq.metrics,
   classification = classification,
   # ind_na = ind_na,
   # qcRes = qcRes,
   read_quality = read_quality,
+  cycl_qual_plot = cycl_qual_plot,
   seq_cont_per_cycle = seq_cont_per_cycle,
   read_freq_plot = read_freq_plot,
   base_calls_plot = base_calls_plot
@@ -213,72 +241,47 @@ rmarkdown::render(
   envir = new.env(parent = globalenv())
 )
 
+######################################
+# Add analysis template to directory #
+######################################
+if (!file.exists("Analysis.Rmd")) {
+  system("cp ../../code/Analysis.Rmd .")
+}
 
 ##################
 # Push to GitHub #
 ##################
 
 if(args$git){
-  # Commit countTable.csv
+
   exp_name <- strsplit(rundir,"/") %>% unlist() %>% tail(1)
+  pdf_name <- paste0(exp_name,".pdf")
   
-  # Add countTable.csv to git
-  system(paste0("git add ", 
-                # rundir, 
-                "countTable.csv"))
+  # Add results to git
+  system(paste0("git add ",
+                "countTable.csv ",
+                pdf_name,
+                " ",
+                sampleXLS,
+                " SampleSheet.csv ",
+                "Analysis.Rmd ",
+                "run_info.csv ",
+                "LIMS_results.csv"
+                ))
   
-  # Commit countTable.csv to git
+  # Commit results to git
   system(paste0("git commit ", 
-                # rundir, 
-                "countTable.csv", 
+                "countTable.csv ",
+                pdf_name,
+                " ",
+                sampleXLS,
+                " SampleSheet.csv ",
+                "Analysis.Rmd ",
+                "run_info.csv ",
+                "LIMS_results.csv ",
                 " -m '",
                 exp_name,
                 " has finished'"))
-  
-  
-  # Add pdf to git
-  pdf_name <- paste0(exp_name,".html")
-  system(paste0("git add ", 
-                # rundir, 
-                pdf_name))
-  
-  
-  system(paste0("git commit ", 
-                # rundir, 
-                pdf_name, 
-                " -m '",
-                exp_name,
-                " results summary'"))
-  
-  # Add spreadsheets to git
-  system(paste0("git add ", 
-                "SwabSeq.xlsx"))
-  
-  system(paste0("git commit ", 
-                "SwabSeq.xlsx", 
-                " -m '",
-                exp_name,
-                " SwabSeq.xlsx'"))
-  
-  system(paste0("git add ", 
-                "SampleSheet.csv"))
-  
-  
-  system(paste0("git commit ", 
-                "SampleSheet.csv", 
-                " -m '",
-                exp_name,
-                " SampleSheet.csv'"))
-  
-  # Add Analysis.Rmd to git
-  system(paste0("git add ", 
-                "Analysis.Rmd"))
-  
-  system(paste0("git commit ", 
-                "Analysis.Rmd", 
-                " -m '",
-                exp_name,
-                " Analysis.Rmd'"))
   
   system("git push")
 }

@@ -10,7 +10,7 @@ from os.path import isfile, join
 import subprocess
 import sys
 import string
-from itertools import chain, combinations, product, repeat
+from itertools import chain, combinations, product, repeat, compress
 import xml.etree.ElementTree as ET
 import csv
 from collections import defaultdict
@@ -80,7 +80,7 @@ def list_duplicates_of(seq,item):
     return locs
 
 
-def remove_duplicates(seqs, target_seq, classification, target, pattern):
+def remove_duplicates(seqs, classification, target, pattern):
     """
     Recursive function to identify duplicated sequences
     and remove them, which replacing the mismatch classification
@@ -94,17 +94,16 @@ def remove_duplicates(seqs, target_seq, classification, target, pattern):
         classification[dups[0]] = "undetermined"
         
         del seqs[dups[1]]
-        del target_seq[dups[1]]
         del classification[dups[1]]
         del target[dups[1]]
         
-        remove_duplicates(seqs, target_seq, classification, target, pattern)
+        remove_duplicates(seqs, classification, target, pattern)
 
 ##############################################################
 # Generate sequence dictionary with desired Hamming distance #
 ##############################################################
 
-def generate_dictionary(sequence, target, indels = False):
+def generate_dictionary(sequence, target, indels = True, rc = False, ham_dist = 1):
     """
     Generates a dictionary of expected variants for a given
     sequence from single base substitutions or single base
@@ -131,18 +130,23 @@ def generate_dictionary(sequence, target, indels = False):
         dict_target_sequence = []
         dict_target = []
         dict_match = []
-    
-        ind_full = sequence[i]
-        ind = sequence[i][0:-1]
+        
+        if rc:
+            ind_full = reverse_complement(sequence[i].upper())[1:]
+            ind = ind_full[0:-1]
+        else:
+            ind_full = sequence[i].upper()[1:]
+            ind = ind_full[0:-1]
     
         dict_sequence.append(ind)
-        dict_target_sequence.append(ind)
         dict_target.append(target[i])
         dict_match.append("exact match")
     
-    
-        dict_sequence = dict_sequence + list(hamming_circle(ind, 1, "ATGCN"))
-        dict_target_sequence.extend(repeat(ind,(len(dict_sequence) - 1)))
+        if ham_dist == 1:
+            dict_sequence = dict_sequence + list(hamming_circle(ind, 1, "ATGCN"))
+        elif ham_dist > 1:
+            dict_sequence = dict_sequence + list(hamming_ball(ind, ham_dist, "ATGCN"))
+
         dict_target.extend(repeat(target[i],(len(dict_sequence) - 1)))
         dict_match.extend(repeat("mismatch",(len(dict_sequence) - 1)))
         
@@ -152,7 +156,6 @@ def generate_dictionary(sequence, target, indels = False):
                 del x[j]
                 x = ''.join(x)
                 dict_sequence.append(x)
-                dict_target_sequence.append(ind)
                 dict_target.append(target[i])
                 dict_match.append("base deletion")
                 
@@ -160,18 +163,19 @@ def generate_dictionary(sequence, target, indels = False):
                 for j in range(len(ind) + 1):
                     x = list(ind)
                     x.insert(j, letter)
-                    x = x[0:26]
+                    x = x[0:-1]
                     x = ''.join([str(elem) for elem in x])
                     
                     dict_sequence.append(x)
-                    dict_target_sequence.append(ind)
                     dict_target.append(target[i])
                     dict_match.append("base insertion")
         
             # Remove collisions and label undetermined
             for seq in dict_sequence:
-                remove_duplicates(dict_sequence, dict_target_sequence, dict_match, dict_target, seq)
-    
+                remove_duplicates(dict_sequence, dict_match, dict_target, seq)
+        
+        dict_target_sequence = [sequence[i][1:-1]] * len(dict_sequence)
+        
         running_sequence = running_sequence + dict_sequence
         running_target_sequence = running_target_sequence + dict_target_sequence
         running_target = running_target + dict_target
@@ -245,7 +249,7 @@ if __name__ == '__main__':
 #            sys.exit('Shell error')
 
     # Direction of primers based on instrument run mode
-    tree = ET.parse(args.rundir + 'RunParameters.xml')
+    tree = ET.parse('RunParameters.xml')
     root = tree.getroot()
     chemistry = root.findtext("Chemistry").split(' ')
 
@@ -256,7 +260,7 @@ if __name__ == '__main__':
 
     # Make dictionaries
     print('Creating Dictionaries')
-    
+
     # Load in index 1 - always reverse compliment
     with open("../../hash_tables/384_plate_map.csv") as f:
         ind1 = [row["index"] for row in csv.DictReader(f)]
@@ -264,19 +268,14 @@ if __name__ == '__main__':
     with open("../../hash_tables/384_plate_map.csv") as f:
         ind_target = [row["target"] for row in csv.DictReader(f)]
 
-    #ind1 = open("../../hash_tables/ind1_plus.txt", "r").read().splitlines()
-    ind1 = [reverse_complement(i).upper()[1:] for i in ind1]
-    ind1_hash_table = generate_dictionary(ind1, ind_target)
+
+    ind1_hash_table = generate_dictionary(ind1, ind_target, rc = True, ham_dist = 1)
 
     # Load in index 2 - reverse compliment depending on instrument / kit
     with open("../../hash_tables/384_plate_map.csv") as f:
         ind2 = [row["index2"] for row in csv.DictReader(f)]
-    if rc:
-        ind2 = [reverse_complement(i).upper()[1:] for i in ind2]
-    else:
-        ind2 = [i.upper()[1:] for i in ind2]
-    
-    ind2_hash_table = generate_dictionary(ind2, ind_target)
+
+    ind2_hash_table = generate_dictionary(ind2, ind_target, rc = rc, ham_dist = 2)
 
     # Load in amplicons
     with open("../../hash_tables/amplicon_map.csv") as f:
@@ -285,8 +284,7 @@ if __name__ == '__main__':
     with open("../../hash_tables/amplicon_map.csv") as f:
         amp_targets = [row["target"] for row in csv.DictReader(f)]
 
-    amps = [i.upper() for i in amps]
-    amps_hash_table = generate_dictionary(amps, amp_targets, indels = True)
+    amps_hash_table = generate_dictionary(amps, amp_targets)
     
 
     # Unzip fastq.gz files
@@ -368,6 +366,27 @@ if __name__ == '__main__':
 
     results = pd.DataFrame(results)
     print(results.groupby(['amps'], dropna=False).size())
+
+    # Top unalined seqs
+    # Amps
+    check_for_nan = results['amps'].isnull()
+    nans = list(check_for_nan)
+    na_amps = pd.DataFrame(list(compress(amps, nans)), columns = ['amps'])
+    na_amps.groupby(['amps'], dropna=False).size().sort_values().tail().to_csv(args.rundir + "top_unaligned_amps.csv")
+
+    # I1
+    check_for_nan = results['i1'].isnull()
+    nans = list(check_for_nan)
+    na_amps = pd.DataFrame(list(compress(i1, nans)), columns = ['i1'])
+    na_amps.groupby(['i1'], dropna=False).size().sort_values().tail().to_csv(args.rundir + "top_unaligned_i1.csv")
+
+    # I2
+    check_for_nan = results['i2'].isnull()
+    nans = list(check_for_nan)
+    na_amps = pd.DataFrame(list(compress(i2, nans)), columns = ['i2'])
+    na_amps.groupby(['i2'], dropna=False).size().sort_values().tail().to_csv(args.rundir + "top_unaligned_i2.csv")
+
+    
     results = results.groupby(['i1','i2','amps'], dropna=False).size()
     results.to_csv(args.rundir + "results.csv")
 
