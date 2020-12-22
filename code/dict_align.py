@@ -275,7 +275,7 @@ if __name__ == '__main__':
     with open("../../hash_tables/384_plate_map.csv") as f:
         ind2 = [row["index2"] for row in csv.DictReader(f)]
 
-    ind2_hash_table = generate_dictionary(ind2, ind_target, rc = rc, ham_dist = 2)
+    ind2_hash_table = generate_dictionary(ind2, ind_target, rc = rc, ham_dist = 1)
 
     # Load in amplicons
     with open("../../hash_tables/amplicon_map.csv") as f:
