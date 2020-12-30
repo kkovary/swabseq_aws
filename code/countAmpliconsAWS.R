@@ -61,8 +61,8 @@ if(!file.exists(fastqR1)) {
   #-----------------------------------------------------------------------------------------------------
 }
 
-setwd(file.path(rundir))
-
+# setwd(file.path(rundir))
+rundir <- paste0(getwd(),"/")
 # Align
 system(paste("python3.8 ../../code/dict_align.py --rundir ./ --dictdir ../../hash_tables/"))
 
