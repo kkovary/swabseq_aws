@@ -1,14 +1,13 @@
-
-
 message("Loading Libraries")
 
 suppressMessages(library(argparser))
-p = arg_parser("utility to count amplicons for SwabSeq")
-p=add_argument(p,"--rundir",  default=".", help="path containing SampleSheet")
-p=add_argument(p,"--basespaceID",  default=NA, help="BaseSpace Run ID")
-p=add_argument(p,"--threads", default=1, help="number of threads for bcl2fastq & amatch")
-p <- add_argument(p, "--git", default = TRUE, help = "commit to GitHub")
-args=parse_args(p) 
+p <- arg_parser("utility to count amplicons for SwabSeq")
+# p <- add_argument(p,"--rundir",  default=NA, help="file path to directory containing data")
+# p <- add_argument(p,"--bsID",  default=NA, help="BaseSpace Run ID")
+p <- add_argument(p,"--runName",  default=NA, help="BaseSpace Run Name")
+p <- add_argument(p,"--threads", default=1, help="number of threads for bcl2fastq")
+p <- add_argument(p, "--git", default = FALSE, help = "commit to GitHub")
+args <- parse_args(p) 
 
 #load required packages
 suppressMessages(library(tidyverse))
@@ -17,37 +16,41 @@ suppressMessages(library(savR))
 suppressMessages(library(Biostrings))
 
 
-rundir=args$rundir
-basespaceID=args$basespaceID
+
+# rundir=args$rundir
+# basespaceID=args$bsID
 threads = args$threads
 
 
 
+system(paste0("mkdir ../runs/", args$runName))
 # setwd(rundir)
-if (file.exists(rundir)){
-  setwd(file.path(rundir))
-} else {
-  dir.create(file.path(rundir))
-  setwd(file.path(rundir))
-  
-}
+setwd(paste0("../runs/", args$runName))
+# if (file.exists(rundir)){
+#   setwd(file.path(rundir))
+# } else {
+#   dir.create(file.path(rundir))
+#   setwd(file.path(rundir))
+# }
 
 
 #-----------------------------------------------------------------------------------------------------
 
 # if fastqs don't exist grab them from basespace
-fastqR1  <- paste0(rundir, 'out/Undetermined_S0_R1_001.fastq.gz')
+fastqR1  <- 'out/Undetermined_S0_R1_001.fastq.gz'
 if(!file.exists(fastqR1)) {
   #Pull BCLs from basespace [skip this section if you already placed bcls in rundir/bcls/] ------------
   #if running miseq then paste run id here
   #if miseq run then grab from basespace, otherwise place bcls here and skip lines 12-23
   
-  if(is.na(basespaceID)){
-    basespaceID <- tail(strsplit(rundir,"/")[[1]],1)
-    system(paste("bs download run --name", basespaceID, "-o ."))
-  } else{
-    system(paste("bs download run --id", basespaceID, "-o ."))
-  }
+  # if(is.na(basespaceID)){
+  #   basespaceID <- tail(strsplit(rundir,"/")[[1]],1)
+  #   system(paste("bs download run --name", basespaceID, "-o ."))
+  # } else{
+  #   system(paste("bs download run --id", basespaceID, "-o ."))
+  # }
+  
+  system(paste("bs download run --name", basespaceID, "-o ."))
   
   # run bcl2fastq to generate fastq.gz files (no demux is happening here)
   #setwd(paste0(rundir,'bcls/'))
