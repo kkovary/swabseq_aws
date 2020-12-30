@@ -50,7 +50,7 @@ if(!file.exists(fastqR1)) {
   #   system(paste("bs download run --id", basespaceID, "-o ."))
   # }
   
-  system(paste("bs download run --name", basespaceID, "-o ."))
+  system(paste("bs download run --name", args$runName, "-o ."))
   
   # run bcl2fastq to generate fastq.gz files (no demux is happening here)
   #setwd(paste0(rundir,'bcls/'))
