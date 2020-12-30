@@ -157,24 +157,24 @@ names(amp.match.summary) <- amp.match.summary.df$amplicon
 
 
 
-# sum_matched <- results %>% 
-#   filter(!is.na(Plate_ID)) %>% 
-#   group_by(amplicon) %>% 
-#   summarise(num_matched = sum(Count)) %>% 
-#   mutate(amplicon = ifelse(is.na(amplicon),
-#                            "no_align",
-#                            amplicon)) %>% 
-#   left_join(amp.match.summary.df) %>% 
-#   dplyr::rename(num_reads = sum) %>% 
-#   dplyr::select(amplicon, num_reads, everything()) %>% 
-#   mutate(perc_match = paste0(round((num_matched / num_reads), 2) * 100, "%"),
-#          num_reads = format(num_reads, big.mark = ','),
-#          num_matched = format(num_matched, big.mark = ','))
-# 
-# sum_matched_df <- sum_matched %>% 
-#   dplyr::select(-amplicon) %>% 
-#   as.data.frame()
-# rownames(sum_matched_df) <- sum_matched$amplicon
+sum_matched <- results %>%
+  filter(!is.na(Plate_ID)) %>%
+  group_by(amplicon) %>%
+  summarise(num_matched = sum(Count)) %>%
+  mutate(amplicon = ifelse(is.na(amplicon),
+                           "no_align",
+                           amplicon)) %>%
+  left_join(amp.match.summary.df) %>%
+  dplyr::rename(num_reads = sum) %>%
+  dplyr::select(amplicon, num_reads, everything()) %>%
+  mutate(perc_match = paste0(round((num_matched / num_reads), 2) * 100, "%"),
+         num_reads = format(num_reads, big.mark = ','),
+         num_matched = format(num_matched, big.mark = ','))
+
+sum_matched_df <- sum_matched %>%
+  dplyr::select(-amplicon) %>%
+  as.data.frame()
+rownames(sum_matched_df) <- sum_matched$amplicon
 
 # Run Info
 rp <- read_xml("RunParameters.xml")
@@ -224,7 +224,7 @@ params <- list(
   experiment = strsplit(rundir,"/") %>% unlist() %>% tail(1),
   run_info = run_info,
   amp.match.summary = amp.match.summary,
-  # sum_matched_df = sum_matched_df,
+  sum_matched_df = sum_matched_df,
   results = results,
   seq.metrics = seq.metrics,
   classification = classification,
@@ -244,13 +244,6 @@ rmarkdown::render(
   params = params,
   envir = new.env(parent = globalenv())
 )
-
-######################################
-# Add analysis template to directory #
-######################################
-if (!file.exists("Analysis.Rmd")) {
-  system("cp ../../code/Analysis.Rmd .")
-}
 
 ##################
 # Push to GitHub #

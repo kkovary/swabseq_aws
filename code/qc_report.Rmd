@@ -12,7 +12,7 @@ params:
   experiment: NA
   run_info: NA
   amp.match.summary: NA
-  # sum_matched_df: NA
+  sum_matched_df: NA
   results: NA
   classification: NA
   read_quality: NA
@@ -58,10 +58,10 @@ params$seq.metrics %>%
 
 ### Alignment summary
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-# params$sum_matched_df %>% 
-#   kable()
-params$amp.match.summary %>% 
+params$sum_matched_df %>%
   kable()
+# params$amp.match.summary %>%
+#   kable()
 ```
 
 ### Sample Classification
