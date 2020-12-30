@@ -4,7 +4,7 @@ suppressMessages(library(argparser))
 p <- arg_parser("utility to count amplicons for SwabSeq")
 # p <- add_argument(p,"--rundir",  default=NA, help="file path to directory containing data")
 # p <- add_argument(p,"--bsID",  default=NA, help="BaseSpace Run ID")
-p <- add_argument(p,"--runName",  default=NA, help="BaseSpace Run Name")
+p <- add_argument(p,"--expName",  default=NA, help="BaseSpace Experiment Name")
 p <- add_argument(p,"--threads", default=1, help="number of threads for bcl2fastq")
 p <- add_argument(p, "--git", default = FALSE, help = "commit to GitHub")
 args <- parse_args(p) 
@@ -24,9 +24,9 @@ threads = args$threads
 
 
 
-system(paste0("mkdir ../runs/", args$runName))
+system(paste0("mkdir ../runs/", args$expName))
 # setwd(rundir)
-setwd(paste0("../runs/", args$runName))
+setwd(paste0("../runs/", args$expName))
 # if (file.exists(rundir)){
 #   setwd(file.path(rundir))
 # } else {
@@ -51,7 +51,7 @@ if(!file.exists(fastqR1)) {
   #   system(paste("bs download run --id", basespaceID, "-o ."))
   # }
   
-  system(paste("bs download run --name", args$runName, "-o ."))
+  system(paste("bs download run --name", args$expName, "-o ."))
   
   # run bcl2fastq to generate fastq.gz files (no demux is happening here)
   #setwd(paste0(rundir,'bcls/'))
