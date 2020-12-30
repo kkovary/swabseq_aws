@@ -98,11 +98,11 @@ results <- results %>%
   mutate(row_384 = as.numeric(row_384),
          col_384 = as.numeric(col_384))
 
-ss <- ss %>%
-  left_join(pm384) %>%
-  separate(pm, into = c("pm_384","row_384","col_384")) %>%
-  mutate(row_384 = as.numeric(row_384),
-         col_384 = as.numeric(col_384))
+# ss <- ss %>%
+#   left_join(pm384) %>%
+#   separate(pm, into = c("pm_384","row_384","col_384")) %>%
+#   mutate(row_384 = as.numeric(row_384),
+#          col_384 = as.numeric(col_384))
 
 
 
@@ -119,7 +119,7 @@ saveRDS(results, file=paste0(rundir, 'countTable.RDS'),version=2)
 
 classification <- results %>%
   filter(!is.na(Plate_ID)) %>% 
-  right_join(ss) %>% 
+  # right_join(ss) %>% 
   group_by_at(names(.)[!names(.) %in% c("Count", "amplicon")]) %>% 
   summarise(S2_spike = sum(Count[grepl("S2_spike_0",amplicon)], na.rm = TRUE),
             S2 = sum(Count[amplicon == "S2"], na.rm = TRUE),
@@ -156,24 +156,24 @@ names(amp.match.summary) <- amp.match.summary.df$amplicon
 
 
 
-sum_matched <- results %>% 
-  filter(!is.na(Plate_ID)) %>% 
-  group_by(amplicon) %>% 
-  summarise(num_matched = sum(Count)) %>% 
-  mutate(amplicon = ifelse(is.na(amplicon),
-                           "no_align",
-                           amplicon)) %>% 
-  left_join(amp.match.summary.df) %>% 
-  dplyr::rename(num_reads = sum) %>% 
-  dplyr::select(amplicon, num_reads, everything()) %>% 
-  mutate(perc_match = paste0(round((num_matched / num_reads), 2) * 100, "%"),
-         num_reads = format(num_reads, big.mark = ','),
-         num_matched = format(num_matched, big.mark = ','))
-
-sum_matched_df <- sum_matched %>% 
-  dplyr::select(-amplicon) %>% 
-  as.data.frame()
-rownames(sum_matched_df) <- sum_matched$amplicon
+# sum_matched <- results %>% 
+#   filter(!is.na(Plate_ID)) %>% 
+#   group_by(amplicon) %>% 
+#   summarise(num_matched = sum(Count)) %>% 
+#   mutate(amplicon = ifelse(is.na(amplicon),
+#                            "no_align",
+#                            amplicon)) %>% 
+#   left_join(amp.match.summary.df) %>% 
+#   dplyr::rename(num_reads = sum) %>% 
+#   dplyr::select(amplicon, num_reads, everything()) %>% 
+#   mutate(perc_match = paste0(round((num_matched / num_reads), 2) * 100, "%"),
+#          num_reads = format(num_reads, big.mark = ','),
+#          num_matched = format(num_matched, big.mark = ','))
+# 
+# sum_matched_df <- sum_matched %>% 
+#   dplyr::select(-amplicon) %>% 
+#   as.data.frame()
+# rownames(sum_matched_df) <- sum_matched$amplicon
 
 # Run Info
 rp <- read_xml("RunParameters.xml")
@@ -223,7 +223,7 @@ params <- list(
   experiment = strsplit(rundir,"/") %>% unlist() %>% tail(1),
   run_info = run_info,
   amp.match.summary = amp.match.summary,
-  sum_matched_df = sum_matched_df,
+  # sum_matched_df = sum_matched_df,
   results = results,
   seq.metrics = seq.metrics,
   classification = classification,
