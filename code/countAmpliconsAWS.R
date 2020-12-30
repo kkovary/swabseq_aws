@@ -14,6 +14,7 @@ suppressMessages(library(tidyverse))
 suppressMessages(library(Rqc))
 suppressMessages(library(savR))
 suppressMessages(library(Biostrings))
+suppressMessages(library(xml2))
 
 
 
