@@ -28,7 +28,8 @@ params:
 ---
 
 ## `r paste("Experiment:", params$experiment)`
-#### Pipeline Version: `r params$git_hash`
+
+####`r paste("Pipeline Version: ", params$git_hash)`
 
 ```{r include=FALSE}
 library(ggplot2)
