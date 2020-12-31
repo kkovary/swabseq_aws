@@ -1,3 +1,6 @@
+# Make sure repository is up to date
+system("git pull")
+
 message("Loading Libraries")
 
 suppressMessages(library(argparser))
@@ -18,51 +21,20 @@ suppressMessages(library(xml2))
 
 
 
-# rundir=args$rundir
-# basespaceID=args$bsID
 threads = args$threads
 
 
 
 system(paste0("mkdir ../runs/", args$expName))
-# setwd(rundir)
 setwd(paste0("../runs/", args$expName))
-# if (file.exists(rundir)){
-#   setwd(file.path(rundir))
-# } else {
-#   dir.create(file.path(rundir))
-#   setwd(file.path(rundir))
-# }
-
-
-#-----------------------------------------------------------------------------------------------------
 
 # if fastqs don't exist grab them from basespace
 fastqR1  <- 'out/Undetermined_S0_R1_001.fastq.gz'
 if(!file.exists(fastqR1)) {
-  #Pull BCLs from basespace [skip this section if you already placed bcls in rundir/bcls/] ------------
-  #if running miseq then paste run id here
-  #if miseq run then grab from basespace, otherwise place bcls here and skip lines 12-23
-  
-  # if(is.na(basespaceID)){
-  #   basespaceID <- tail(strsplit(rundir,"/")[[1]],1)
-  #   system(paste("bs download run --name", basespaceID, "-o ."))
-  # } else{
-  #   system(paste("bs download run --id", basespaceID, "-o ."))
-  # }
-  
   system(paste("bs download run --name", args$expName, "-o ."))
-  
-  # run bcl2fastq to generate fastq.gz files (no demux is happening here)
-  #setwd(paste0(rundir,'bcls/'))
-  #note this is using 64 threads and running on a workstation, reduce threads if necessary
   system(paste("bcl2fastq --runfolder-dir . --output-dir out/ --create-fastq-for-index-reads  --ignore-missing-bcl --use-bases-mask=Y26,I10,I10 --processing-threads", threads, "--no-lane-splitting --sample-sheet /dev/null"))
-  #for sharing, make tar of bcls directory
-  # system(paste("tar -cvf", paste0(rundir,'bcls.tar'), "../bcls/"))
-  #-----------------------------------------------------------------------------------------------------
 }
 
-# setwd(file.path(rundir))
 rundir <- paste0(getwd(),"/")
 # Align
 system(paste("python3.8 ../../code/dict_align.py --rundir ./ --dictdir ../../hash_tables/"))
@@ -221,6 +193,8 @@ cycl_qual_plot <- rqcCycleQualityPlot(qcRes)
 
 
 params <- list(
+  git_hash = system("git rev-parse HEAD", intern = TRUE),
+  git_hash_short = system("git rev-parse --short HEAD", intern = TRUE),
   experiment = strsplit(rundir,"/") %>% unlist() %>% tail(1),
   run_info = run_info,
   amp.match.summary = amp.match.summary,
@@ -228,8 +202,6 @@ params <- list(
   results = results,
   seq.metrics = seq.metrics,
   classification = classification,
-  # ind_na = ind_na,
-  # qcRes = qcRes,
   read_quality = read_quality,
   cycl_qual_plot = cycl_qual_plot,
   seq_cont_per_cycle = seq_cont_per_cycle,
@@ -244,41 +216,3 @@ rmarkdown::render(
   params = params,
   envir = new.env(parent = globalenv())
 )
-
-##################
-# Push to GitHub #
-##################
-
-if(args$git){
-
-  exp_name <- strsplit(rundir,"/") %>% unlist() %>% tail(1)
-  pdf_name <- paste0(exp_name,".pdf")
-  
-  # Add results to git
-  system(paste0("git add ",
-                "countTable.csv ",
-                pdf_name,
-                " ",
-                sampleXLS,
-                " SampleSheet.csv ",
-                "Analysis.Rmd ",
-                "run_info.csv ",
-                "LIMS_results.csv"
-                ))
-  
-  # Commit results to git
-  system(paste0("git commit ", 
-                "countTable.csv ",
-                pdf_name,
-                " ",
-                sampleXLS,
-                " SampleSheet.csv ",
-                "Analysis.Rmd ",
-                "run_info.csv ",
-                "LIMS_results.csv ",
-                " -m '",
-                exp_name,
-                " has finished'"))
-  
-  system("git push")
-}

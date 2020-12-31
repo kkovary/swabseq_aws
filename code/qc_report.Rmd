@@ -23,10 +23,12 @@ params:
   seq.metrics: NA
   base_calls_plot: NA
   ind_na: NA
+  git_hash: NA
+  git_hash_short: NA
 ---
 
 ## `r paste("Experiment:", params$experiment)`
-
+#### Pipeline Version: `r params$git_hash`
 
 ```{r include=FALSE}
 library(ggplot2)
@@ -37,9 +39,6 @@ library(RColorBrewer)
 library(GGally)
 library(scales)
 library(viridis)
-# library(kableExtra)
-# library(ggpubr)
-
 ```
 
 \scriptsize
@@ -60,8 +59,6 @@ params$seq.metrics %>%
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 params$sum_matched_df %>%
   kable()
-# params$amp.match.summary %>%
-#   kable()
 ```
 
 ### Sample Classification
